@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Globalization;
 using System.Windows.Forms;
 
@@ -18,10 +20,18 @@ class CalcForm : Form
     readonly TextBox display = new TextBox();
     readonly Label info = new Label();
     readonly ComboBox rate = new ComboBox();
+    readonly Button histButton = new Button();
+    readonly Panel histPanel = new Panel();
+    readonly TextBox histBox = new TextBox();
+    readonly List<string> history = new List<string>();
     readonly CultureInfo de = CultureInfo.GetCultureInfo("de-DE");
     decimal acc;
     string op = "";
     bool fresh = true;
+
+    const int CalcWidth = 295;
+    const int FullWidth = 565;
+    const int FormHeight = 435;
 
     public CalcForm()
     {
@@ -31,7 +41,7 @@ class CalcForm : Form
         MaximizeBox = false;
         KeyPreview = true;
         Font = new Font("Segoe UI", 10);
-        ClientSize = new Size(295, 435);
+        ClientSize = new Size(CalcWidth, FormHeight);
 
         info.SetBounds(10, 10, 275, 20);
         info.TextAlign = ContentAlignment.MiddleRight;
@@ -54,10 +64,16 @@ class CalcForm : Form
         rate.SetBounds(105, 85, 80, 25);
         rate.TabStop = false;
 
+        histButton.Text = "Verlauf >>";
+        histButton.SetBounds(195, 84, 90, 27);
+        histButton.TabStop = false;
+        histButton.Click += (s, e) => ToggleHistory();
+
         Controls.Add(info);
         Controls.Add(display);
         Controls.Add(rateLabel);
         Controls.Add(rate);
+        Controls.Add(histButton);
 
         AddButton("C", 0, 0);
         AddButton("\u2190", 1, 0);
@@ -86,6 +102,32 @@ class CalcForm : Form
         credit.SetBounds(10, 408, 275, 20);
         credit.TextAlign = ContentAlignment.MiddleCenter;
         Controls.Add(credit);
+
+        histPanel.SetBounds(305, 10, 250, 415);
+        histPanel.Visible = false;
+
+        histBox.SetBounds(5, 5, 240, 340);
+        histBox.Multiline = true;
+        histBox.ReadOnly = true;
+        histBox.ScrollBars = ScrollBars.Vertical;
+        histBox.BackColor = Color.White;
+        histBox.Font = new Font("Consolas", 9);
+        histBox.TabStop = false;
+
+        var printButton = new Button { Text = "Drucken" };
+        printButton.SetBounds(5, 352, 115, 30);
+        printButton.TabStop = false;
+        printButton.Click += (s, e) => Print();
+
+        var clearButton = new Button { Text = "Leeren" };
+        clearButton.SetBounds(130, 352, 115, 30);
+        clearButton.TabStop = false;
+        clearButton.Click += (s, e) => ClearHistory();
+
+        histPanel.Controls.Add(histBox);
+        histPanel.Controls.Add(printButton);
+        histPanel.Controls.Add(clearButton);
+        Controls.Add(histPanel);
     }
 
     Button AddButton(string text, int col, int row, int colSpan = 1, int rowSpan = 1)
@@ -100,6 +142,67 @@ class CalcForm : Form
         b.Click += (s, e) => Press(text);
         Controls.Add(b);
         return b;
+    }
+
+    void ToggleHistory()
+    {
+        histPanel.Visible = !histPanel.Visible;
+        ClientSize = new Size(histPanel.Visible ? FullWidth : CalcWidth, FormHeight);
+        histButton.Text = histPanel.Visible ? "<< Verlauf" : "Verlauf >>";
+    }
+
+    void Log(string line)
+    {
+        history.Add(line);
+        histBox.AppendText(line + Environment.NewLine);
+    }
+
+    void ClearHistory()
+    {
+        history.Clear();
+        histBox.Clear();
+    }
+
+    void Print()
+    {
+        if (history.Count == 0)
+        {
+            MessageBox.Show("Der Verlauf ist leer.", "Drucken");
+            return;
+        }
+
+        var lines = new List<string>();
+        lines.Add("MwSt-Rechner 0.1 Beta");
+        lines.Add(DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
+        lines.Add(new string('-', 32));
+        lines.AddRange(history);
+        lines.Add(new string('-', 32));
+        lines.Add("Powered by Donald2_");
+
+        int idx = 0;
+        var font = new Font("Courier New", 10);
+        var doc = new PrintDocument();
+        doc.PrintPage += (s, e) =>
+        {
+            float y = e.MarginBounds.Top;
+            float lh = font.GetHeight(e.Graphics);
+            while (idx < lines.Count && y + lh <= e.MarginBounds.Bottom)
+            {
+                e.Graphics.DrawString(lines[idx], font, Brushes.Black, e.MarginBounds.Left, y);
+                y += lh;
+                idx++;
+            }
+            e.HasMorePages = idx < lines.Count;
+        };
+
+        using (var dlg = new PrintDialog { Document = doc })
+        {
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                idx = 0;
+                doc.Print();
+            }
+        }
     }
 
     protected override void OnKeyPress(KeyPressEventArgs e)
@@ -195,8 +298,12 @@ class CalcForm : Form
     void Equals()
     {
         if (op == "") return;
-        info.Text = Fmt(acc) + " " + op + " " + display.Text + " =";
+        string left = Fmt(acc);
+        string o = op;
+        string right = display.Text;
+        info.Text = left + " " + o + " " + right + " =";
         Calc();
+        Log(left + " " + o + " " + right + " = " + display.Text);
         fresh = true;
     }
 
@@ -209,6 +316,7 @@ class CalcForm : Form
         decimal tax = add ? res - v : v - res;
         display.Text = Fmt(res);
         info.Text = (add ? "+" : "-") + " MwSt " + rate.Text + ": " + Fmt(Math.Round(tax, 2, MidpointRounding.AwayFromZero));
+        Log((add ? "+" : "-") + "MwSt " + rate.Text + ": " + Fmt(v) + " -> " + Fmt(res));
         fresh = true;
     }
 }
