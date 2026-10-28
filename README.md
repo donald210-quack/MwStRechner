@@ -10,7 +10,7 @@ Ein einfacher Windows-Taschenrechner für Mehrwertsteuer.
 - Grundrechnen mit **+** und **-**
 - Tastatureingabe möglich (Zahlen, +, -, Enter, Backspace, Esc)
 
-## Bauen
+## Windows
 
 Voraussetzung: Windows mit .NET Framework 4 (bei Windows 10/11 bereits vorhanden).
 
@@ -19,6 +19,19 @@ build.bat
 ```
 
 Die EXE landet unter `build\MwStRechner.exe`.
+
+## Linux (Debian, Fedora)
+
+Voraussetzung: Python 3 mit tkinter.
+
+- Debian: `sudo apt install python3-tk`
+- Fedora: `sudo dnf install python3-tkinter`
+
+Starten:
+
+```
+python3 linux/mwst_rechner.py
+```
 
 ## Version
 
