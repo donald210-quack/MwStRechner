@@ -37,4 +37,4 @@ python3 linux/mwst_rechner.py
 
 ## Version
 
-0.1 Beta
+0.22

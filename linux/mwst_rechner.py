@@ -15,7 +15,7 @@ def fmt(v):
 class CalcApp:
     def __init__(self, root):
         self.root = root
-        root.title("MwSt-Rechner 0.1 Beta")
+        root.title("MwSt-Rechner 0.22")
         root.resizable(False, False)
 
         self.display = tk.StringVar(value="0")
@@ -99,7 +99,7 @@ class CalcApp:
             messagebox.showinfo("Drucken", "Der Verlauf ist leer.")
             return
         lines = [
-            "MwSt-Rechner 0.1 Beta",
+            "MwSt-Rechner 0.22",
             datetime.now().strftime("%d.%m.%Y %H:%M"),
             "-" * 32,
             *self.history,

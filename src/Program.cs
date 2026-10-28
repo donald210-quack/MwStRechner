@@ -35,7 +35,7 @@ class CalcForm : Form
 
     public CalcForm()
     {
-        Text = "MwSt-Rechner 0.1 Beta";
+        Text = "MwSt-Rechner 0.22";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -172,7 +172,7 @@ class CalcForm : Form
         }
 
         var lines = new List<string>();
-        lines.Add("MwSt-Rechner 0.1 Beta");
+        lines.Add("MwSt-Rechner 0.22");
         lines.Add(DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
         lines.Add(new string('-', 32));
         lines.AddRange(history);
