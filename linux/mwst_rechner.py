@@ -1,5 +1,8 @@
+import subprocess
+import tempfile
 import tkinter as tk
-from tkinter import ttk
+from datetime import datetime
+from tkinter import ttk, messagebox
 from decimal import Decimal, ROUND_HALF_UP
 
 CENT = Decimal("0.01")
@@ -20,6 +23,7 @@ class CalcApp:
         self.acc = Decimal(0)
         self.op = ""
         self.fresh = True
+        self.history = []
 
         tk.Label(root, textvariable=self.info, fg="gray").grid(
             row=0, column=0, columnspan=4, sticky="e", padx=10, pady=(10, 0))
@@ -30,7 +34,9 @@ class CalcApp:
         tk.Label(root, text="MwSt-Satz:").grid(row=2, column=0, columnspan=2, sticky="w", padx=10)
         self.rate = ttk.Combobox(root, state="readonly", values=["19 %", "7 %"], width=8)
         self.rate.current(0)
-        self.rate.grid(row=2, column=2, columnspan=2, sticky="w", padx=10)
+        self.rate.grid(row=2, column=2, sticky="w", padx=10)
+        self.hist_button = tk.Button(root, text="Verlauf >>", command=self.toggle_history)
+        self.hist_button.grid(row=2, column=3, sticky="e", padx=10)
 
         buttons = [
             ("C", 0, 0), ("\u2190", 1, 0), ("+MwSt", 2, 0), ("-MwSt", 3, 0),
@@ -51,10 +57,64 @@ class CalcApp:
         tk.Label(root, text="Powered by Donald2_", fg="gray").grid(
             row=8, column=0, columnspan=4, pady=(0, 10))
 
+        self.hist_frame = tk.Frame(root)
+        self.hist_text = tk.Text(self.hist_frame, width=30, height=22, font=("Monospace", 9),
+                                 state="disabled", bg="white", wrap="none")
+        self.hist_text.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
+        tk.Button(self.hist_frame, text="Drucken", command=self.print_history).grid(
+            row=1, column=0, sticky="ew", padx=5, pady=5)
+        tk.Button(self.hist_frame, text="Leeren", command=self.clear_history).grid(
+            row=1, column=1, sticky="ew", padx=5, pady=5)
+        self.hist_frame.grid(row=0, column=4, rowspan=9, sticky="ns", padx=(0, 10), pady=10)
+        self.hist_frame.grid_remove()
+
         root.bind("<Key>", self.on_key)
         root.bind("<Return>", lambda e: self.press("="))
         root.bind("<BackSpace>", lambda e: self.press("\u2190"))
         root.bind("<Escape>", lambda e: self.press("C"))
+
+    def toggle_history(self):
+        if self.hist_frame.winfo_ismapped():
+            self.hist_frame.grid_remove()
+            self.hist_button.config(text="Verlauf >>")
+        else:
+            self.hist_frame.grid()
+            self.hist_button.config(text="<< Verlauf")
+
+    def log(self, line):
+        self.history.append(line)
+        self.hist_text.config(state="normal")
+        self.hist_text.insert("end", line + "\n")
+        self.hist_text.config(state="disabled")
+        self.hist_text.see("end")
+
+    def clear_history(self):
+        self.history = []
+        self.hist_text.config(state="normal")
+        self.hist_text.delete("1.0", "end")
+        self.hist_text.config(state="disabled")
+
+    def print_history(self):
+        if not self.history:
+            messagebox.showinfo("Drucken", "Der Verlauf ist leer.")
+            return
+        lines = [
+            "MwSt-Rechner 0.1 Beta",
+            datetime.now().strftime("%d.%m.%Y %H:%M"),
+            "-" * 32,
+            *self.history,
+            "-" * 32,
+            "Powered by Donald2_",
+        ]
+        try:
+            with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+                path = f.name
+            subprocess.run(["lp", path], check=True)
+        except FileNotFoundError:
+            messagebox.showerror("Drucken", "Das Programm 'lp' wurde nicht gefunden. Bitte CUPS installieren.")
+        except subprocess.CalledProcessError:
+            messagebox.showerror("Drucken", "Der Druckauftrag konnte nicht gesendet werden.")
 
     def on_key(self, event):
         c = event.char
@@ -123,8 +183,12 @@ class CalcApp:
     def equals(self):
         if not self.op:
             return
-        self.info.set(f"{fmt(self.acc)} {self.op} {self.display.get()} =")
+        left = fmt(self.acc)
+        o = self.op
+        right = self.display.get()
+        self.info.set(f"{left} {o} {right} =")
         self.calc()
+        self.log(f"{left} {o} {right} = {self.display.get()}")
         self.fresh = True
 
     def vat(self, add):
@@ -137,6 +201,7 @@ class CalcApp:
         self.display.set(fmt(res))
         sign = "+" if add else "-"
         self.info.set(f"{sign} MwSt {self.rate.get()}: {fmt(tax)}")
+        self.log(f"{sign}MwSt {self.rate.get()}: {fmt(v)} -> {fmt(res)}")
         self.fresh = True
 
 
