@@ -1,5 +1,7 @@
 # MwSt-Rechner
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-donald210-yellow?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/donald210)
+
 Ein einfacher Windows-Taschenrechner für Mehrwertsteuer.
 
 ## Funktionen
